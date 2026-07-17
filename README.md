@@ -1,70 +1,71 @@
-
-**This is a template README.md.  Be sure to update this with project specific content that describes your performance test project.**
-
 # envoy-audit-performance-test
 
-Performance test suite for the `<digital service name>`, using [performance-test-runner](https://github.com/hmrc/performance-test-runner) under the hood.
+Performance test suite for the Envoy-based audit solution.
 
-## Pre-requisites
+## What it measures
 
-### Services
+| Metric | How |
+|---|---|
+| Request throughput (RPS) | Locust stats CSV + HTML report |
+| Latency (p50/p95/p99) | Locust stats CSV + HTML report |
+| Audit event delivery | Stub/audit/count vs requests sent |
+| Audit event loss % | Logged at test end; fails build if > threshold |
 
-Start Mongo Docker container following instructions from the [MDTP Handbook](https://docs.tax.service.gov.uk/mdtp-handbook/documentation/developer-set-up/set-up-mongodb.html).
 
-Start `PLATFORM_TEST_EXAMPLE_UI_TESTS` services as follows:
+## Prerequisites
 
-```bash
-sm2 --start PLATFORM_TEST_EXAMPLE_UI_TESTS
-```
+- Docker + Docker Compose
+- make
+- Envoy + audit service running and reachable (staging or local)
 
-### Logging
+## Running locally (smoke test)
+make smoke LOCUST_HOST=http://localhost:10000
+## Running a full test
+make test \
+  LOCUST_HOST=https://envoy-audit.protected.mdtp \
+  LOCUST_USERS=100 \
+  LOCUST_RUN_TIME=10m \
+  LOCUST_SPAWN_RATE=10
+Results are written to ./results/:
+- report.html — Locust HTML report (throughput, latency charts)
+- stats.csv, stats_history.csv, failures.csv — raw data
+## Running in Jenkins
 
-The default log level for all HTTP requests is set to `WARN`. Configure [logback.xml](src/test/resources/logback.xml) to update this if required.
+Trigger theenvoy-audit-performance-tests Jenkins job with parameters:
 
-### WARNING :warning:
+| Parameter | Default | Description |
+|---|---|---|
+|users | 50 | Concurrent users |
+|duration | 5m | Test duration |
+|spawn_rate | 5 | Users/sec ramp rate |
+|envoy_host | staging URL | Envoy ingress |
+|loss_threshold | 1.0 | Max audit loss % before fail |
 
-Do **NOT** run a full performance test against staging from your local machine. Please [implement a new performance test job](https://docs.tax.service.gov.uk/mdtp-handbook/documentation/mdtp-test-approach/performance-testing/performance-test-a-microservice/index.html) and execute your job from the dashboard in [Performance Jenkins](https://performance.tools.staging.tax.service.gov.uk).
+## Interpreting results
 
-## Tests
+1. Openresults/report.html for throughput and latency charts.
+2. Check the test log for the=== Audit Delivery Summary === block — this shows event loss.
+3. A non-zero Jenkins exit code means either latency SLOs were breached or audit loss exceeded the threshold.
 
-Run smoke test (locally) as follows:
 
-```bash
-sbt -Dperftest.runSmokeTest=true -DrunLocal=true gatling:test
-```
+## Regression use
 
-Run full performance test (locally) as follows:
+Re-run with the same parameters before and after any change to Envoy config, Lua filter, or audit service. Compare `stats_history.csv` across runs.
 
-```bash
-sbt -DrunLocal=true gatling:test
-```
 
-Run smoke test (staging) as follows:
+---
 
-```bash
-sbt -Dperftest.runSmokeTest=true -DrunLocal=false gatling:test
-```
+## How to Test
 
-## Scalafmt
+### Locally (no Envoy yet — validate the suite itself)
 
-Check all project files are formatted as expected as follows:
 
-```bash
-sbt scalafmtCheckAll scalafmtCheck
-```
+# 1. Start stubs only
+docker compose up --build cip-datastream-stub upstream
 
-Format `*.sbt` and `project/*.scala` files as follows:
+# 2. Point LOCUST_HOST at the upstream stub directly to verify Locust works
+make smoke LOCUST_HOST=http://localhost:9090
 
-```bash
-sbt scalafmtSbt
-```
+# 3. Check results/report.html opens in browser
+open results/report.html
 
-Format all project files as follows:
-
-```bash
-sbt scalafmtAll
-```
-
-## License
-
-This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html").
