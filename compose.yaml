@@ -1,0 +1,41 @@
+services:
+  cip-datastream-stub:
+    build: ./stubs/cip-datastream-stub
+    ports:
+      - "8080:8080"
+
+  upstream:
+    build: ./stubs/upstream
+    ports:
+      - "9090:9090"
+
+  controller:
+    image: locustio/locust
+    user: ${UID:-1000}
+    ports:
+      - "8089:8089"
+    environment:
+      - LOCUST_HOST
+      - LOCUST_USERS
+      - LOCUST_RUN_TIME
+      - LOCUST_SPAWN_RATE
+      - LOCUST_EXPECT_WORKERS
+      - AUDIT_STUB_URL=http://cip-datastream-stub:8080
+      - AUDIT_LOSS_THRESHOLD_PCT
+    volumes:
+      - ./:/mnt/locust
+    command: --config /mnt/locust/controller.conf
+    depends_on:
+      - cip-datastream-stub
+
+  worker:
+    image: locustio/locust
+    user: ${UID:-1000}
+    environment:
+      - LOCUST_HOST
+      - AUDIT_STUB_URL=http://cip-datastream-stub:8080
+    volumes:
+      - ./:/mnt/locust
+    command: --worker -f /mnt/locust/locustfile.py --master-host controller
+    depends_on:
+      - controller
