@@ -1,71 +1,86 @@
 # envoy-audit-performance-test
 
-Performance test suite for the Envoy-based audit solution.
+Performance test suite for the Envoy audit path. This suite exercises traffic through Envoy, the Lua audit filter, the audit service transformation path, and delivery to a CIP Datastream stub.
 
-## What it measures
+## Repository structure
 
-| Metric | How |
-|---|---|
-| Request throughput (RPS) | Locust stats CSV + HTML report |
-| Latency (p50/p95/p99) | Locust stats CSV + HTML report |
-| Audit event delivery | Stub/audit/count vs requests sent |
-| Audit event loss % | Logged at test end; fails build if > threshold |
-
+- Jenkinsfile— Jenkins pipeline for environment selection and test execution
+- Makefile— local and CI entrypoint for the test suite
+- compose.yaml— Docker Compose topology for Locust controller, worker, local upstream, and CIP Datastream stub
+- locustfile.py— load scenario and audit delivery verification
+- stubs/— local mock services for the upstream target and CIP Datastream endpoint
+- results/— generated resource usage and test artifacts
+- .gitignore— ignores generated files and local artifacts
 
 ## Prerequisites
 
-- Docker + Docker Compose
-- make
-- Envoy + audit service running and reachable (staging or local)
+- Docker and Docker Compose available on the host
+- A shell with permissions to run docker compose
+- If running against non-local environments, ensure network access to the target Envoy host
 
-## Running locally (smoke test)
-make smoke LOCUST_HOST=http://localhost:10000
-## Running a full test
-make test \
-  LOCUST_HOST=https://envoy-audit.protected.mdtp \
-  LOCUST_USERS=100 \
-  LOCUST_RUN_TIME=10m \
-  LOCUST_SPAWN_RATE=10
-Results are written to ./results/:
-- report.html — Locust HTML report (throughput, latency charts)
-- stats.csv, stats_history.csv, failures.csv — raw data
-## Running in Jenkins
+## How it works
 
-Trigger theenvoy-audit-performance-tests Jenkins job with parameters:
+- controllerand workerservices run the Locust load test
+- stubs/upstreamprovides a local HTTP target for localmode
+- stubs/cip-datastream-stubrecords audit events and exposes /audit/count
+- The test compares HTTP requests sent through Envoy with audit events received by the stub
+- Resource consumption is sampled during the test into results/resource-stats.csv
 
-| Parameter | Default | Description |
-|---|---|---|
-|users | 50 | Concurrent users |
-|duration | 5m | Test duration |
-|spawn_rate | 5 | Users/sec ramp rate |
-|envoy_host | staging URL | Envoy ingress |
-|loss_threshold | 1.0 | Max audit loss % before fail |
+## Local testing
+
+From the folder:
+Run a full local test:
+ENVIRONMENT=local make test
+Run a quick smoke test:
+make smoke
+Run against a remote environment:
+
+
+Notes:
+
+- ENVIRONMENTcontrols the default host mapping inside Makefile
+- ENVIRONMENT=localruns against the local stubs/upstreamservice via http://upstream:9090
+- LOCUST_HOSTcan override the target host explicitly for remote test targets
+- TEST_WORKERSdefaults to the host CPU core count using nprocor sysctl
+- LOCUST_USERS, LOCUST_RUN_TIME, LOCUST_SPAWN_RATE, and AUDIT_LOSS_THRESHOLD_PCTare configurable via environment variables
 
 ## Interpreting results
 
-1. Openresults/report.html for throughput and latency charts.
-2. Check the test log for the=== Audit Delivery Summary === block — this shows event loss.
-3. A non-zero Jenkins exit code means either latency SLOs were breached or audit loss exceeded the threshold.
+- results/resource-stats.csvcontains CPU and memory usage samples for controllerand workerservices
+- Locust console output shows:
+  - request throughput
+  - response latency
+  - number of successful / failed requests
+- At test stop, the audit stub reports:
+  - requests sent
+  - audit events received
+  - event loss and loss percentage
+- If AUDIT_LOSS_THRESHOLD_PCTis exceeded, the test run fails
+
+## Jenkins integration
+
+The Jenkinsfiledefines a parameterized pipeline with:
+
+- ENVIRONMENT(choice: local, staging, qa)
+- LOCUST_HOST(optional override)
+- users
+- duration
+- spawn_rate
+- loss_threshold
+
+It runs:
+
+bash
+make test ENVIRONMENT=${ENVIRONMENT} LOCUST_HOST='${LOCUST_HOST}' \
+  TEST_WORKERS=${NUMBER_OF_CORES} LOCUST_USERS=${users} \
+  LOCUST_RUN_TIME=${duration} LOCUST_SPAWN_RATE=${spawn_rate} \
+  AUDIT_LOSS_THRESHOLD_PCT=${loss_threshold}
 
 
-## Regression use
+The Jenkins pipeline then archives results/*and cleans up Docker services after completion.
 
-Re-run with the same parameters before and after any change to Envoy config, Lua filter, or audit service. Compare `stats_history.csv` across runs.
+## Cleanup
 
-
----
-
-## How to Test
-
-### Locally (no Envoy yet — validate the suite itself)
-
-
-# 1. Start stubs only
-docker compose up --build cip-datastream-stub upstream
-
-# 2. Point LOCUST_HOST at the upstream stub directly to verify Locust works
-make smoke LOCUST_HOST=http://localhost:9090
-
-# 3. Check results/report.html opens in browser
-open results/report.html
+To stop and remove containers and test artifacts:
+make clean
 

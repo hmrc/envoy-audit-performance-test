@@ -22,7 +22,7 @@ pipeline {
             steps {
                 script {
                     def envHosts = [
-                        local: 'http://localhost:9090',
+                        local: 'http://upstream:9090',
                         staging: 'https://envoy-audit.staging.tax.service.gov.uk',
                         qa: 'https://envoy-audit.qa.tax.service.gov.uk'
                     ]
