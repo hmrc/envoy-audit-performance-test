@@ -6,6 +6,7 @@ from locust import HttpUser, task, between, events
 from locust.runners import MasterRunner
 
 AUDIT_STUB_URL = os.getenv("AUDIT_STUB_URL", "http://cip-datastream-stub:8080")
+LOCUST_HOST_HEADER = os.getenv("LOCUST_HOST_HEADER", "")
 
 # Shared counters for audit event delivery tracking
 _requests_sent = 0
@@ -32,27 +33,36 @@ class AuditPathUser(HttpUser):
 
     @task(8)
     def submit_small(self):
+        headers = {"Content-Type": "application/json", "X-Request-ID": _request_id()}
+        if LOCUST_HOST_HEADER:
+            headers["Host"] = LOCUST_HOST_HEADER
         self.client.post(
             "/submit",
             json={"payload": "x" * 1024},
-            headers={"Content-Type": "application/json", "X-Request-ID": _request_id()},
+            headers=headers,
             name="POST /submit",
         )
 
     @task(2)
     def submit_large(self):
+        headers = {"Content-Type": "application/json", "X-Request-ID": _request_id()}
+        if LOCUST_HOST_HEADER:
+            headers["Host"] = LOCUST_HOST_HEADER
         self.client.post(
             "/submit",
             json={"payload": "x" * (512 * 1024)},
-            headers={"Content-Type": "application/json", "X-Request-ID": _request_id()},
+            headers=headers,
             name="POST /submit (large)",
         )
 
     @task(3)
     def get_resource(self):
+        headers = {"X-Request-ID": _request_id()}
+        if LOCUST_HOST_HEADER:
+            headers["Host"] = LOCUST_HOST_HEADER
         self.client.get(
             "/resource",
-            headers={"X-Request-ID": _request_id()},
+            headers=headers,
             name="GET /resource",
         )
 
