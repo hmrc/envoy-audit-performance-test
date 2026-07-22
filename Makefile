@@ -28,11 +28,11 @@ test-local:
 	LOCUST_USERS=$(LOCUST_USERS) \
 	LOCUST_RUN_TIME=$(LOCUST_RUN_TIME) \
 	LOCUST_SPAWN_RATE=$(LOCUST_SPAWN_RATE) \
-	LOCUST_EXPECT_WORKERS=$(TEST_WORKERS) \
+	LOCUST_EXPECT_WORKERS=1 \
 	AUDIT_LOSS_THRESHOLD_PCT=$(AUDIT_LOSS_THRESHOLD_PCT) \
 	DOCKER_UID=`id -u` \
 		docker compose --profile local up \
-		--scale worker-local=$(TEST_WORKERS) \
+		--scale worker-local=1 \
 		--exit-code-from controller
 
 clean:
@@ -40,6 +40,6 @@ clean:
 	rm -rf $(RESULTS_DIR)
 
 smoke:
-	$(MAKE) test-local LOCUST_USERS=1 LOCUST_RUN_TIME=30s LOCUST_SPAWN_RATE=1 TEST_WORKERS=1
+	$(MAKE) test-local LOCUST_USERS=1 LOCUST_RUN_TIME=30s LOCUST_SPAWN_RATE=1
 
 .PHONY: test test-local clean smoke
