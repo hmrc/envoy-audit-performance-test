@@ -6,12 +6,13 @@ services:
 
   upstream:
     build: ./stubs/upstream
+    profiles: [local]
     ports:
       - "9090:9090"
 
   controller:
     image: locustio/locust
-    user: ${UID:-1000}
+    user: ${DOCKER_UID:-1000}
     ports:
       - "8089:8089"
     environment:
@@ -31,7 +32,8 @@ services:
 
   worker:
     image: locustio/locust
-    user: ${UID:-1000}
+    user: ${DOCKER_UID:-1000}
+    profiles: [staging]
     environment:
       - LOCUST_HOST
       - LOCUST_HOST_HEADER
@@ -41,3 +43,18 @@ services:
     command: --worker -f /mnt/locust/locustfile.py --master-host controller
     depends_on:
       - controller
+
+  worker-local:
+    image: locustio/locust
+    user: ${DOCKER_UID:-1000}
+    profiles: [local]
+    environment:
+      - LOCUST_HOST
+      - LOCUST_HOST_HEADER
+      - AUDIT_STUB_URL=http://cip-datastream-stub:8080
+    volumes:
+      - ./:/mnt/locust
+    command: --worker -f /mnt/locust/locustfile.py --master-host controller
+    depends_on:
+      - controller
+      - upstream

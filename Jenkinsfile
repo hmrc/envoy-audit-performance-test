@@ -1,3 +1,30 @@
+#!/usr/bin/env groovy
+
+def getAccountId(String environment) {
+    def account_info = [
+        management  : ["account_id": "419929493928"],
+        integration : ["account_id": "150648916438"],
+        staging     : ["account_id": "186795391298"],
+        qa          : ["account_id": "248771275994"],
+        externaltest: ["account_id": "970278273631"],
+        production  : ["account_id": "490818658393"],
+        development : ["account_id": "618259438944"]
+    ]
+    account_info[environment].account_id
+}
+
+def awsEnv(environment) {
+    """set +x
+    SESSIONID=\$(date +"%s")
+    AWS_CREDENTIALS=\$(aws sts assume-role --role-arn arn:aws:iam::${ getAccountId(environment) }:role/service/RoleJenkinsTerraformProvisioner --role-session-name \$SESSIONID --query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' --output text)
+    export AWS_ACCESS_KEY_ID=\$(echo \$AWS_CREDENTIALS | awk '{print \$1}')
+    export AWS_SECRET_ACCESS_KEY=\$(echo \$AWS_CREDENTIALS | awk '{print \$2}')
+    export AWS_SESSION_TOKEN=\$(echo \$AWS_CREDENTIALS | awk '{print \$3}')
+    export ENVIRONMENT="${environment}"
+    set -x
+    """
+}
+
 pipeline {
 
     agent {
