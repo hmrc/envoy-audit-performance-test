@@ -30,8 +30,7 @@ Performance test suite for the Envoy audit path. This suite exercises traffic th
 
 From the folder:
 
-bash
-cd /Users/pratulpatel/Documents/MDTP/envoy-audit-performance-test
+
 
 
 Run a full local test:
