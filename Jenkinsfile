@@ -35,9 +35,8 @@ pipeline {
     }
 
     parameters {
-        choice(name: 'ENVIRONMENT', choices: ['local', 'staging', 'qa'], description: 'Named test environment')
-        string(name: 'LOCUST_HOST', defaultValue: '', description: 'Optional override for the Envoy target host')
-        string(name: 'LOCUST_HOST_HEADER', defaultValue: '', description: 'Optional override for the HTTP Host header when using direct internal targets')
+        booleanParam(name: 'OVERRIDE_BUILD_FAILURE_NOTIFICATION', defaultValue: true, description: 'Override the build failure notification')
+        choice(name: 'environment', choices: ['staging', 'qa'], description: 'Named test environment')
         string(name: 'users', defaultValue: '50', description: 'Number of concurrent Locust users')
         string(name: 'duration', defaultValue: '5m', description: 'Test run duration (e.g. 5m, 1h)')
         string(name: 'spawn_rate', defaultValue: '5', description: 'Users spawned per second')
@@ -50,19 +49,17 @@ pipeline {
             steps {
                 script {
                     def envHosts = [
-                        local: 'http://upstream:9090',
-                        staging: 'https://envoy-audit.staging.tax.service.gov.uk',
-                        qa: 'https://envoy-audit.qa.tax.service.gov.uk'
+                        staging: 'https://transaction-engine-frontend.public-rate.mdtp',
+                        qa     : 'https://transaction-engine-frontend.public-rate.mdtp'
                     ]
-                    def targetHost = params.LOCUST_HOST?.trim() ? params.LOCUST_HOST : envHosts[params.ENVIRONMENT]
+                    def locust_host = envHosts[params.environment]
 
                     sh """#!/bin/bash -e
-                        NUMBER_OF_CORES=\$(nproc)
+                        ${awsEnv(params.environment)}
+                        NUMBER_OF_CORES=`nproc`
 
                         make test \\
-                          ENVIRONMENT=${params.ENVIRONMENT} \\
-                          LOCUST_HOST='${targetHost}' \\
-                          LOCUST_HOST_HEADER='${params.LOCUST_HOST_HEADER}' \\
+                          LOCUST_HOST="${locust_host}" \\
                           TEST_WORKERS=\${NUMBER_OF_CORES} \\
                           LOCUST_USERS=${params.users} \\
                           LOCUST_RUN_TIME=${params.duration} \\
@@ -74,7 +71,7 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'results/*', allowEmptyArchive: true
-                    sh 'docker compose rm -sf'
+                    sh 'DOCKER_UID=`id -u` docker compose rm -sf'
                 }
             }
         }
