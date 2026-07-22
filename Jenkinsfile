@@ -49,8 +49,8 @@ pipeline {
             steps {
                 script {
                     def envHosts = [
-                        staging: 'https://transaction-engine-frontend.public-rate.mdtp',
-                        qa     : 'https://transaction-engine-frontend.public-rate.mdtp'
+                        staging: 'https://transaction-engine.staging.tax.service.gov.uk',
+                        qa     : 'https://transaction-engine.qa.tax.service.gov.uk'
                     ]
                     def locust_host = envHosts[params.environment]
 
