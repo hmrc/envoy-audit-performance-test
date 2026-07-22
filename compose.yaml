@@ -16,6 +16,7 @@ services:
       - "8089:8089"
     environment:
       - LOCUST_HOST
+      - LOCUST_HOST_HEADER
       - LOCUST_USERS
       - LOCUST_RUN_TIME
       - LOCUST_SPAWN_RATE
@@ -33,6 +34,7 @@ services:
     user: ${UID:-1000}
     environment:
       - LOCUST_HOST
+      - LOCUST_HOST_HEADER
       - AUDIT_STUB_URL=http://cip-datastream-stub:8080
     volumes:
       - ./:/mnt/locust
