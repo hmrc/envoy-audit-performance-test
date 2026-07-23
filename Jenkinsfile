@@ -58,20 +58,20 @@ pipeline {
                         ${awsEnv(params.environment)}
                         NUMBER_OF_CORES=`nproc`
 
-                        CLOUDFRONT_HEADER=$(aws ssm get-parameter \
-                         --name /isc/www/cloudfront-request-header \
-                         --with-decryption \
-                         --query Parameter.Value \
-                         --output text)
+                        CLOUDFRONT_HEADER=\$(aws ssm get-parameter \
+                        --name /isc/www/cloudfront-request-header \
+                        --with-decryption \
+                        --query Parameter.Value \
+                        --output text)
 
                         make test \\
-                         LOCUST_HOST="${locust_host}" \\
-                         CLOUDFRONT_HEADER="\${CLOUDFRONT_HEADER}" \\
-                         TEST_WORKERS=\${NUMBER_OF_CORES} \\
-                         LOCUST_USERS=${params.users} \\
-                         LOCUST_RUN_TIME=${params.duration} \\
-                         LOCUST_SPAWN_RATE=${params.spawn_rate} \\
-                         AUDIT_LOSS_THRESHOLD_PCT=${params.loss_threshold}
+                        LOCUST_HOST="${locust_host}" \\
+                        CLOUDFRONT_HEADER="\${CLOUDFRONT_HEADER}" \\
+                        TEST_WORKERS=\${NUMBER_OF_CORES} \\
+                        LOCUST_USERS=${params.users} \\
+                        LOCUST_RUN_TIME=${params.duration} \\
+                        LOCUST_SPAWN_RATE=${params.spawn_rate} \\
+                        AUDIT_LOSS_THRESHOLD_PCT=${params.loss_threshold}
                     """
                 }
             }
