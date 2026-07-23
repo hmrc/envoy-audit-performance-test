@@ -7,6 +7,7 @@ from locust.runners import MasterRunner
 
 AUDIT_STUB_URL = os.getenv("AUDIT_STUB_URL", "http://cip-datastream-stub:8080")
 LOCUST_HOST_HEADER = os.getenv("LOCUST_HOST_HEADER", "")
+CLOUDFRONT_HEADER = os.getenv("CLOUDFRONT_HEADER", "")
 
 # Shared counters for audit event delivery tracking
 _requests_sent = 0
@@ -14,6 +15,21 @@ _lock = threading.Lock()
 
 logger = logging.getLogger(__name__)
 
+def build_headers(content_type=True):
+    headers = {
+        "X-Request-ID": _request_id()
+    }
+
+    if content_type:
+        headers["Content-Type"] = "application/json"
+
+    if LOCUST_HOST_HEADER:
+        headers["Host"] = LOCUST_HOST_HEADER
+
+    if CLOUDFRONT_HEADER:
+        headers["x-request-from-cloudfront"] = CLOUDFRONT_HEADER
+
+    return headers
 
 @events.request.add_listener
 def on_request(request_type, name, response_time, response_length, exception, **kwargs):
@@ -33,9 +49,7 @@ class AuditPathUser(HttpUser):
 
     @task(8)
     def submit_small(self):
-        headers = {"Content-Type": "application/json", "X-Request-ID": _request_id()}
-        if LOCUST_HOST_HEADER:
-            headers["Host"] = LOCUST_HOST_HEADER
+        headers = build_headers()
         self.client.post(
             "/submit",
             json={"payload": "x" * 1024},
@@ -45,9 +59,7 @@ class AuditPathUser(HttpUser):
 
     @task(2)
     def submit_large(self):
-        headers = {"Content-Type": "application/json", "X-Request-ID": _request_id()}
-        if LOCUST_HOST_HEADER:
-            headers["Host"] = LOCUST_HOST_HEADER
+        headers = build_headers()
         self.client.post(
             "/submit",
             json={"payload": "x" * (512 * 1024)},
@@ -57,9 +69,7 @@ class AuditPathUser(HttpUser):
 
     @task(3)
     def get_resource(self):
-        headers = {"X-Request-ID": _request_id()}
-        if LOCUST_HOST_HEADER:
-            headers["Host"] = LOCUST_HOST_HEADER
+        headers = build_headers(content_type=False)
         self.client.get(
             "/resource",
             headers=headers,
