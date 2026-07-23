@@ -59,7 +59,7 @@ pipeline {
                         NUMBER_OF_CORES=`nproc`
 
                         CLOUDFRONT_HEADER=\$(aws ssm get-parameter \
-                        --name /isc/www/cloudfront-request-header \
+                        --name /isc/transaction-engine/cloudfront-request-header \
                         --with-decryption \
                         --query Parameter.Value \
                         --output text)
