@@ -47,35 +47,34 @@ class AuditPathUser(HttpUser):
     """
     wait_time = between(0.05, 0.2)
 
-    @task(8)
-    def submit_small(self):
-        headers = build_headers()
-        self.client.post(
-            "/submit",
-            json={"payload": "x" * 1024},
-            headers=headers,
-            name="POST /submit",
-        )
+    # @task(8)
+    # def submit_small(self):
+    #     headers = build_headers()
+    #     self.client.post(
+    #         "/submit",
+    #         json={"payload": "x" * 1024},
+    #         headers=headers,
+    #         name="POST /submit",
+    #     )
 
-    @task(2)
-    def submit_large(self):
-        headers = build_headers()
-        self.client.post(
-            "/submit",
-            json={"payload": "x" * (512 * 1024)},
-            headers=headers,
-            name="POST /submit (large)",
-        )
+    # @task(2)
+    # def submit_large(self):
+    #     headers = build_headers()
+    #     self.client.post(
+    #         "/submit",
+    #         json={"payload": "x" * (512 * 1024)},
+    #         headers=headers,
+    #         name="POST /submit (large)",
+    #     )
 
     @task(3)
-    def get_resource(self):
+    def get_tgping(self):
         headers = build_headers(content_type=False)
         self.client.get(
-            "/resource",
+            "/tgping",
             headers=headers,
-            name="GET /resource",
+            name="GET /tgping",
         )
-
 
 def _request_id() -> str:
     import uuid
