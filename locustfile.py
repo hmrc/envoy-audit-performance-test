@@ -51,29 +51,29 @@ class AuditPathUser(HttpUser):
     def submit_small(self):
         headers = build_headers()
         self.client.post(
-            "/submit",
+            "/submission",
             json={"payload": "x" * 1024},
             headers=headers,
-            name="POST /submit",
+            name="POST /submission",
         )
 
     @task(2)
     def submit_large(self):
         headers = build_headers()
         self.client.post(
-            "/submit",
+            "/submission",
             json={"payload": "x" * (512 * 1024)},
             headers=headers,
-            name="POST /submit (large)",
+            name="POST /submission (large)",
         )
 
     @task(3)
-    def get_resource(self):
+    def get_tgping(self):
         headers = build_headers(content_type=False)
         self.client.get(
-            "/resource",
+            "/tgping",
             headers=headers,
-            name="GET /resource",
+            name="GET /tgping",
         )
 
 def _request_id() -> str:
